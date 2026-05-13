@@ -939,10 +939,10 @@ if "df" in st.session_state:
                 na_position="last"
             )
 
-        deals_df = deals_df.fillna("")
+        display_df = deals_df.fillna("")
 
         st.dataframe(
-            deals_df,
+            display_df,
             use_container_width=True,
             height=700
         )
