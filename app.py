@@ -151,10 +151,13 @@ def parse_bitrix_datetime(date_string):
 
 def minutes_to_human(minutes):
 
-    if minutes is None:
-        return "NOT REACHED"
+    if (
+        minutes is None
+        or pd.isna(minutes)
+    ):
+        return "-"
 
-    minutes = int(minutes)
+    minutes = round(float(minutes))
 
     hours = minutes // 60
     mins = minutes % 60
