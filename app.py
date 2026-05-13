@@ -860,6 +860,40 @@ if "df" in st.session_state:
             "Called Max"
         ]
 
+        # =====================================
+        # HUMAN FORMAT
+        # =====================================
+
+        manager_df["Taken Avg"] = (
+            manager_df["Taken Avg"]
+            .apply(minutes_to_human)
+        )
+
+        manager_df["Taken Median"] = (
+            manager_df["Taken Median"]
+            .apply(minutes_to_human)
+        )
+
+        manager_df["Taken Max"] = (
+            manager_df["Taken Max"]
+            .apply(minutes_to_human)
+        )
+
+        manager_df["Called Avg"] = (
+            manager_df["Called Avg"]
+            .apply(minutes_to_human)
+        )
+
+        manager_df["Called Median"] = (
+            manager_df["Called Median"]
+            .apply(minutes_to_human)
+        )
+
+        manager_df["Called Max"] = (
+            manager_df["Called Max"]
+            .apply(minutes_to_human)
+        )
+
         st.dataframe(
             manager_df,
             use_container_width=True
