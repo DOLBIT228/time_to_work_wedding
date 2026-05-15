@@ -265,21 +265,9 @@ def bitrix_request(method, data=None):
 
     time.sleep(0.05)
 
-    response = requests.post(
-        url,
-        json=data,
-        timeout=30
-    )
+    last_error = None
 
-    result = response.json()
-
-    # =====================================
-    # API LIMIT
-    # =====================================
-
-    if result.get("error") == "QUERY_LIMIT_EXCEEDED":
-
-        time.sleep(2)
+    for attempt in range(4):
 
         response = requests.post(
             url,
@@ -289,11 +277,27 @@ def bitrix_request(method, data=None):
 
         result = response.json()
 
-    if "error" in result:
+        if "error" not in result:
+            return result
 
-        raise Exception(result)
+        error_code = result.get("error", "")
 
-    return result
+        if error_code in {
+            "QUERY_LIMIT_EXCEEDED",
+            "TOO_MANY_REQUESTS",
+            "OPERATION_TIME_LIMIT"
+        }:
+            time.sleep(2 + attempt)
+            last_error = result
+            continue
+
+        raise Exception(
+            f"{method}: {result}"
+        )
+
+    raise Exception(
+        f"{method}: {last_error}"
+    )
 
 # =========================================================
 # DEALS
@@ -378,10 +382,13 @@ def get_stage_history(deal_id):
         }
     }
 
-    result = bitrix_request(
-        "crm.stagehistory.list",
-        payload
-    )
+    try:
+        result = bitrix_request(
+            "crm.stagehistory.list",
+            payload
+        )
+    except Exception:
+        return []
 
     items = (
         result.get("result", {})
