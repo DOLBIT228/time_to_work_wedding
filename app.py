@@ -3,6 +3,7 @@ import pandas as pd
 import time
 import streamlit as st
 import plotly.express as px
+from concurrent.futures import ThreadPoolExecutor
 
 # =========================================================
 # AUTH
@@ -262,6 +263,8 @@ def bitrix_request(method, data=None):
 
     url = f"{WEBHOOK_URL}{method}.json"
 
+    time.sleep(0.05)
+
     response = requests.post(
         url,
         json=data,
@@ -275,10 +278,6 @@ def bitrix_request(method, data=None):
     # =====================================
 
     if result.get("error") == "QUERY_LIMIT_EXCEEDED":
-
-        print(
-            "ЛІМІТ API -> sleep 2 sec"
-        )
 
         time.sleep(2)
 
@@ -301,10 +300,6 @@ def bitrix_request(method, data=None):
 # =========================================================
 
 def get_all_deals():
-
-    print("\n===================================")
-    print("ЗАВАНТАЖЕННЯ УГОД")
-    print("===================================\n")
 
     all_deals = []
 
@@ -358,11 +353,6 @@ def get_all_deals():
 
         all_deals.extend(deals)
 
-        print(
-            f"Завантажено угод: "
-            f"{len(all_deals)}"
-        )
-
         if "next" not in result:
             break
 
@@ -370,17 +360,13 @@ def get_all_deals():
 
         time.sleep(API_DELAY)
 
-    print(
-        f"\nВсього угод: "
-        f"{len(all_deals)}"
-    )
-
     return all_deals
 
 # =========================================================
 # HISTORY
 # =========================================================
 
+@st.cache_data(show_spinner=False)
 def get_stage_history(deal_id):
 
     payload = {
@@ -401,8 +387,6 @@ def get_stage_history(deal_id):
         result.get("result", {})
         .get("items", [])
     )
-
-    time.sleep(API_DELAY)
 
     return items
 
@@ -439,26 +423,56 @@ def find_stage_datetime(
 # ANALYSIS
 # =========================================================
 
+@st.cache_data(show_spinner=False)
 def run_analysis():
 
     deals = get_all_deals()
 
     rows = []
 
-    print("\n===================================")
-    print("АНАЛІЗ SLA")
-    print("===================================\n")
+    # =====================================
+    # LOAD HISTORY PARALLEL
+    # =====================================
+
+    history_map = {}
+
+    deal_ids = [
+        deal["ID"]
+        for deal in deals
+    ]
+
+    with ThreadPoolExecutor(max_workers=10) as executor:
+
+        histories = executor.map(
+            get_stage_history,
+            deal_ids
+        )
+
+        for deal_id, history in zip(
+            deal_ids,
+            histories
+        ):
+
+            history_map[deal_id] = history
+
+    progress = st.progress(0)
+
+    status = st.empty()
 
     for index, deal in enumerate(deals):
+
+        progress.progress(
+            (index + 1) / len(deals)
+        )
+
+        status.info(
+            f"Аналізуємо угоду "
+            f"{index + 1}/{len(deals)}"
+        )
 
         try:
 
             deal_id = deal["ID"]
-
-            print(
-                f"[{index + 1}/{len(deals)}] "
-                f"Угода #{deal_id}"
-            )
 
             # =================================
             # MANAGER
@@ -501,8 +515,9 @@ def run_analysis():
                 deal["DATE_CREATE"]
             )
 
-            history = get_stage_history(
-                deal_id
+            history = history_map.get(
+                deal_id,
+                []
             )
 
             taken_raw = find_stage_datetime(
@@ -627,22 +642,15 @@ def run_analysis():
                     )
             })
 
-            print(
-                f"   -> TAKEN SLA: "
-                f"{minutes_to_human(taken_sla)}"
-            )
-
-            print(
-                f"   -> CALLED SLA: "
-                f"{minutes_to_human(called_sla)}"
-            )
-
         except Exception as e:
-
-            print(
-                f"ПОМИЛКА УГОДИ "
+            status.warning(
+                f"Помилка обробки угоди "
                 f"{deal_id}: {e}"
             )
+
+    progress.empty()
+
+    status.empty()
 
     return pd.DataFrame(rows)
 
