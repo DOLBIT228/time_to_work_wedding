@@ -85,6 +85,11 @@ run = st.sidebar.button(
     use_container_width=True
 )
 
+clear_cache = st.sidebar.button(
+    "Очистити кеш",
+    use_container_width=True
+)
+
 st.title("📊 SLA Dashboard")
 
 # =========================================================
@@ -664,6 +669,14 @@ def run_analysis():
 # =========================================================
 # STREAMLIT APP
 # =========================================================
+
+if clear_cache:
+
+    st.cache_data.clear()
+
+    st.session_state.pop("df", None)
+
+    st.success("Кеш очищено. Запустіть аналіз повторно.")
 
 if run:
 
