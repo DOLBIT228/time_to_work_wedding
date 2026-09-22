@@ -117,7 +117,7 @@ def get_time_setting(name, default):
 
 
 # Робочі години та обід. Значення можна задати як 11 або 11:00.
-WORK_START = get_time_setting("WORK_START", "10:00")
+WORK_START = get_time_setting("WORK_START", "11:00")
 WORK_END = get_time_setting("WORK_END", "19:00")
 LUNCH_START = get_time_setting("LUNCH_START", "14:00")
 LUNCH_END = get_time_setting("LUNCH_END", "15:00")
